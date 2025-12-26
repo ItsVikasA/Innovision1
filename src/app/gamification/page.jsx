@@ -1,5 +1,5 @@
 "use client";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, TrendingUp, Target, Brain } from "lucide-react";
 import GamificationDashboard from "@/components/gamification/GamificationDashboard";
@@ -10,7 +10,7 @@ import XPChart from "@/components/gamification/XPChart";
 import SkillTree from "@/components/gamification/SkillTree";
 
 export default function GamificationPage() {
-  const { data: session } = useSession();
+  const { user } = useAuth();
 
   if (!session) {
     return (

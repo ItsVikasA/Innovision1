@@ -1,5 +1,5 @@
 "use client";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AnalyticsDashboard from "@/components/dashboard/AnalyticsDashboard";
@@ -8,7 +8,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export default function AnalyticsPage() {
-  const { data: session, status } = useSession();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const [isInstructor, setIsInstructor] = useState(false);
 
@@ -17,12 +17,12 @@ export default function AnalyticsPage() {
       router.push("/login");
     }
     // Check if user has instructor role (you can implement this check)
-    if (session?.user) {
+    if (user) {
       setIsInstructor(true); // For now, all users can access
     }
   }, [status, router, session]);
 
-  if (status === "loading") {
+  if (loading) {
     return <div className="p-8">Loading...</div>;
   }
 

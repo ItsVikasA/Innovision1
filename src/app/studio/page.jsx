@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,7 @@ import TemplateSelector from "@/components/studio/TemplateSelector";
 import ResourceManager from "@/components/studio/ResourceManager";
 
 export default function StudioPage() {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [courseTitle, setCourseTitle] = useState("");
   const [courseDescription, setCourseDescription] = useState("");
   const [chapters, setChapters] = useState([]);
@@ -53,7 +53,7 @@ export default function StudioPage() {
       description: courseDescription,
       chapters,
       status: "draft",
-      createdBy: session?.user?.email,
+      createdBy: user?.email,
       createdAt: new Date().toISOString()
     };
 
@@ -84,7 +84,7 @@ export default function StudioPage() {
       description: courseDescription,
       chapters,
       status: "published",
-      createdBy: session?.user?.email,
+      createdBy: user?.email,
       publishedAt: editingCourseId ? undefined : new Date().toISOString(), // Keep original publish date if updating
       updatedAt: new Date().toISOString()
     };
@@ -479,7 +479,7 @@ export default function StudioPage() {
                             </div>
                             <div className="flex items-center gap-2">
                               <FileText className="h-4 w-4" />
-                              <span>By {session?.user?.name || session?.user?.email || "Instructor"}</span>
+                              <span>By {user?.name || user?.email || "Instructor"}</span>
                             </div>
                           </div>
                         </div>

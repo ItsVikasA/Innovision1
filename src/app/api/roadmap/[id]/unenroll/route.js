@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/app/auth";
-import { db } from "@/lib/firebase";
-import { doc, deleteDoc, collection, getDocs } from "firebase/firestore";
+import { getServerSession } from "@/lib/auth-server";
+import { adminDb } from "@/lib/firebase-admin";
 
 export async function DELETE(request, { params }) {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session || !session.user || !session.user.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -13,33 +12,42 @@ export async function DELETE(request, { params }) {
     const { id: roadmapId } = params;
 
     // Delete all chapter subcollections first
-    const chaptersRef = collection(db, "users", session.user.email, "roadmaps", roadmapId, "chapters");
-    const chaptersSnapshot = await getDocs(chaptersRef);
-    
+    const chaptersRef = adminDb
+      .collection("users")
+      .doc(session.user.email)
+      .collection("roadmaps")
+      .doc(roadmapId)
+      .collection("chapters");
+    const chaptersSnapshot = await chaptersRef.get();
+
     for (const chapterDoc of chaptersSnapshot.docs) {
       // Delete tasks subcollection
-      const tasksRef = collection(db, "users", session.user.email, "roadmaps", roadmapId, "chapters", chapterDoc.id, "tasks");
-      const tasksSnapshot = await getDocs(tasksRef);
+      const tasksRef = adminDb
+        .collection("users")
+        .doc(session.user.email)
+        .collection("roadmaps")
+        .doc(roadmapId)
+        .collection("chapters")
+        .doc(chapterDoc.id)
+        .collection("tasks");
+      const tasksSnapshot = await tasksRef.get();
       for (const taskDoc of tasksSnapshot.docs) {
-        await deleteDoc(taskDoc.ref);
+        await taskDoc.ref.delete();
       }
-      
+
       // Delete chapter document
-      await deleteDoc(chapterDoc.ref);
+      await chapterDoc.ref.delete();
     }
 
     // Delete the roadmap document
-    const roadmapRef = doc(db, "users", session.user.email, "roadmaps", roadmapId);
-    await deleteDoc(roadmapRef);
+    const roadmapRef = adminDb.collection("users").doc(session.user.email).collection("roadmaps").doc(roadmapId);
+    await roadmapRef.delete();
 
     return NextResponse.json({
       success: true,
-      message: "Successfully unenrolled from course"
+      message: "Successfully unenrolled from course",
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to unenroll", details: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to unenroll", details: error.message }, { status: 500 });
   }
 }

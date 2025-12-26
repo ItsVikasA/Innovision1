@@ -1,10 +1,10 @@
 
-import { auth } from "@/app/auth";
+import { getServerSession } from "@/lib/auth-server";
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
     try {
-        const session = await auth();
+        const session = await getServerSession();
         if (!session) {
             return NextResponse.json(
                 { message: "Unauthorized" },

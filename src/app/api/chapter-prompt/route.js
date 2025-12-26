@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { auth } from "@/app/auth";
-import { deleteDoc, doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getServerSession } from "@/lib/auth-server";
+import { adminDb } from "@/lib/firebase-admin";
 
 export const openai = new OpenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -32,41 +31,37 @@ function parseJson(response) {
 }
 
 async function updateDatabase(content, chapter, roadmapId, session) {
+  const docRef = adminDb
+    .collection("users")
+    .doc(session.user.email)
+    .collection("roadmaps")
+    .doc(roadmapId)
+    .collection("chapters")
+    .doc(chapter);
+
   try {
     const { tasks, ...chapterNew } = content;
 
-    const docRef = doc(
-      db,
-      "users",
-      session.user.email,
-      "roadmaps",
-      roadmapId,
-      "chapters",
-      chapter
-    );
+    await docRef.update({ content: chapterNew, process: "completed" });
 
-    await updateDoc(docRef, { content: chapterNew, process: "completed" });
+    const taskDocRef = docRef.collection("tasks").doc("task");
 
-    const taskDocRef = doc(
-      db,
-      "users",
-      session.user.email,
-      "roadmaps",
-      roadmapId,
-      "chapters",
-      chapter,
-      "tasks",
-      "task"
-    );
-
-    await setDoc(taskDocRef, { ...tasks });
+    await taskDocRef.set({ ...tasks });
   } catch (error) {
     console.error("Error updating database:", error);
-    await deleteDoc(docRef);
+    await docRef.delete();
   }
 }
 
 async function generateChapter(prompt, number, roadmapId, session) {
+  const docRef = adminDb
+    .collection("users")
+    .doc(session.user.email)
+    .collection("roadmaps")
+    .doc(roadmapId)
+    .collection("chapters")
+    .doc(number);
+
   try {
     const response = await openai.chat.completions.create({
       model: "gemini-2.0-flash",
@@ -92,39 +87,27 @@ async function generateChapter(prompt, number, roadmapId, session) {
     await updateDatabase(data, number, roadmapId, session);
   } catch (error) {
     console.error("Error generating chapter:", error);
-
-    const docRef = doc(
-      db,
-      "users",
-      session.user.email,
-      "roadmaps",
-      roadmapId,
-      "chapters",
-      number
-    );
-    await deleteDoc(docRef);
+    await docRef.delete();
   }
 }
 
 async function cleanupStuckChapters(session, roadmapId, number) {
-  const docRef = doc(
-    db,
-    "users",
-    session.user.email,
-    "roadmaps",
-    roadmapId,
-    "chapters",
-    number
-  );
+  const docRef = adminDb
+    .collection("users")
+    .doc(session.user.email)
+    .collection("roadmaps")
+    .doc(roadmapId)
+    .collection("chapters")
+    .doc(number);
 
-  const docSnap = await getDoc(docRef);
-  if (docSnap.exists()) {
+  const docSnap = await docRef.get();
+  if (docSnap.exists) {
     const data = docSnap.data();
     const timeDiff = Date.now() - (data.timestamp || 0);
 
     if (data.process === "pending" && timeDiff > 60 * 1000) {
       console.log(`Deleting stuck chapter: ${number}`);
-      await deleteDoc(docRef);
+      await docRef.delete();
     }
   }
 }
@@ -132,24 +115,22 @@ async function cleanupStuckChapters(session, roadmapId, number) {
 // POST request to generate chapter contents
 export async function POST(req) {
   const { prompt, number, roadmapId } = await req.json();
-  const session = await auth();
+  const session = await getServerSession();
 
   if (!session) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const chapterDocRef = doc(
-      db,
-      "users",
-      session.user.email,
-      "roadmaps",
-      roadmapId,
-      "chapters",
-      number
-    );
+    const chapterDocRef = adminDb
+      .collection("users")
+      .doc(session.user.email)
+      .collection("roadmaps")
+      .doc(roadmapId)
+      .collection("chapters")
+      .doc(number);
 
-    await setDoc(chapterDocRef, {
+    await chapterDocRef.set({
       process: "pending",
       timestamp: Date.now(),
     });
@@ -163,9 +144,6 @@ export async function POST(req) {
     return NextResponse.json({ process: "pending" }, { status: 202 });
   } catch (error) {
     console.error("POST request error:", error);
-    return NextResponse.json(
-      { message: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

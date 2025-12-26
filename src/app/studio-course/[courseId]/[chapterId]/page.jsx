@@ -3,13 +3,13 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Sidebar from "@/components/sidebar/page";
 import StudioContent from "@/components/chapter_content/StudioContent";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/auth";
 import { useContext } from "react";
 import xpContext from "@/contexts/xp";
 
 export default function StudioCoursePage() {
   const params = useParams();
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [course, setCourse] = useState(null);
   const [courseData, setCourseData] = useState(null);
   const [loading, setLoading] = useState(true);

@@ -1,32 +1,32 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { saveLMSConfig, getLMSConfig } from "@/lib/lms-integration";
 
 export default function LMSConfig() {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [config, setConfig] = useState({
-    platform: 'moodle',
+    platform: "moodle",
     enabled: false,
     credentials: {
-      baseUrl: '',
-      username: '',
-      password: '',
-      apiKey: '',
+      baseUrl: "",
+      username: "",
+      password: "",
+      apiKey: "",
     },
   });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (session?.user?.email) {
+    if (user?.email) {
       loadConfig();
     }
-  }, [session]);
+  }, [user]);
 
   const loadConfig = async () => {
-    const savedConfig = await getLMSConfig(session.user.email);
+    const savedConfig = await getLMSConfig(user.email);
     if (savedConfig) {
       setConfig(savedConfig);
     }
@@ -35,10 +35,10 @@ export default function LMSConfig() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await saveLMSConfig(session.user.email, config);
-      alert('LMS configuration saved successfully!');
+      await saveLMSConfig(user.email, config);
+      alert("LMS configuration saved successfully!");
     } catch (error) {
-      alert('Failed to save configuration');
+      alert("Failed to save configuration");
     } finally {
       setSaving(false);
     }
@@ -67,26 +67,30 @@ export default function LMSConfig() {
           <input
             type="url"
             value={config.credentials.baseUrl}
-            onChange={(e) => setConfig({
-              ...config,
-              credentials: { ...config.credentials, baseUrl: e.target.value }
-            })}
+            onChange={(e) =>
+              setConfig({
+                ...config,
+                credentials: { ...config.credentials, baseUrl: e.target.value },
+              })
+            }
             placeholder="https://your-lms.com"
             className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
 
-        {config.platform === 'moodle' ? (
+        {config.platform === "moodle" ? (
           <>
             <div>
               <label className="block mb-2 text-sm font-medium">Username</label>
               <input
                 type="text"
                 value={config.credentials.username}
-                onChange={(e) => setConfig({
-                  ...config,
-                  credentials: { ...config.credentials, username: e.target.value }
-                })}
+                onChange={(e) =>
+                  setConfig({
+                    ...config,
+                    credentials: { ...config.credentials, username: e.target.value },
+                  })
+                }
                 placeholder="Enter Moodle username"
                 className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
               />
@@ -96,10 +100,12 @@ export default function LMSConfig() {
               <input
                 type="password"
                 value={config.credentials.password}
-                onChange={(e) => setConfig({
-                  ...config,
-                  credentials: { ...config.credentials, password: e.target.value }
-                })}
+                onChange={(e) =>
+                  setConfig({
+                    ...config,
+                    credentials: { ...config.credentials, password: e.target.value },
+                  })
+                }
                 placeholder="Enter Moodle password"
                 className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
               />
@@ -111,10 +117,12 @@ export default function LMSConfig() {
             <input
               type="password"
               value={config.credentials.apiKey}
-              onChange={(e) => setConfig({
-                ...config,
-                credentials: { ...config.credentials, apiKey: e.target.value }
-              })}
+              onChange={(e) =>
+                setConfig({
+                  ...config,
+                  credentials: { ...config.credentials, apiKey: e.target.value },
+                })
+              }
               placeholder="Enter Canvas API key"
               className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             />
@@ -135,7 +143,7 @@ export default function LMSConfig() {
         </div>
 
         <Button onClick={handleSave} disabled={saving} className="w-full">
-          {saving ? 'Saving...' : 'Save Configuration'}
+          {saving ? "Saving..." : "Save Configuration"}
         </Button>
       </CardContent>
     </Card>

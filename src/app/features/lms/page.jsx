@@ -1,5 +1,5 @@
 "use client";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { getLMSConfig } from "@/lib/lms-integration";
 import { toast } from "sonner";
 
 export default function LMSPage() {
-  const { data: session, status } = useSession();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,7 +25,7 @@ export default function LMSPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (session?.user?.email) {
+    if (user?.email) {
       loadConfig();
       fetchCourses();
     }
@@ -92,7 +92,7 @@ export default function LMSPage() {
     }
   };
 
-  if (status === "loading" || loading) {
+  if (loading || loading) {
     return <div className="p-8">Loading...</div>;
   }
 

@@ -1,30 +1,18 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/app/auth";
-import { db } from "@/lib/firebase";
-import {
-  doc,
-  updateDoc,
-  increment,
-  setDoc,
-  query,
-  collection,
-  getDocs,
-  where,
-  serverTimestamp,
-} from "firebase/firestore";
+import { getServerSession } from "@/lib/auth-server";
+import { adminDb, FieldValue } from "@/lib/firebase-admin";
 import { nanoid } from "nanoid";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash", 
+  model: "gemini-2.5-flash",
   generationConfig: {
     temperature: 0.7,
     topP: 0.8,
     topK: 40,
     maxOutputTokens: 8192,
-    responseMimeType: "application/json", 
+    responseMimeType: "application/json",
   },
   safetySettings: [
     { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
@@ -34,12 +22,11 @@ const model = genAI.getGenerativeModel({
   ],
 });
 
-
 async function updateDatabase(details, id, user, retries = 3) {
-  const docRef = doc(db, "users", user.email, "roadmaps", id);
+  const docRef = adminDb.collection("users").doc(user.email).collection("roadmaps").doc(id);
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      await setDoc(docRef, { ...details, updatedAt: serverTimestamp() }, { merge: true });
+      await docRef.set({ ...details, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       return true;
     } catch (error) {
       console.error(`DB Attempt ${attempt} failed:`, error);
@@ -50,7 +37,6 @@ async function updateDatabase(details, id, user, retries = 3) {
   return false;
 }
 
-
 function cleanJsonResponse(text) {
   return text
     .replace(/^```json\s?/, "")
@@ -59,9 +45,8 @@ function cleanJsonResponse(text) {
     .trim();
 }
 
-
 async function generateRoadmap(prompt, id, session, user_prompt) {
-  const docRef = doc(db, "users", session.user.email, "roadmaps", id);
+  const docRef = adminDb.collection("users").doc(session.user.email).collection("roadmaps").doc(id);
 
   try {
     const result = await model.generateContent(`
@@ -99,7 +84,6 @@ Topic: ${prompt}
       throw new Error(`Invalid JSON from Gemini: ${parseError.message}`);
     }
 
-    
     if (parsed.error === "unsuitable") {
       await updateDatabase(
         {
@@ -112,15 +96,12 @@ Topic: ${prompt}
       return;
     }
 
-    
-    const difficulty =
-      user_prompt.difficulty === "in-depth" ? "inDepth" : user_prompt.difficulty;
+    const difficulty = user_prompt.difficulty === "in-depth" ? "inDepth" : user_prompt.difficulty;
 
-    await setDoc(
-      doc(db, "users", session.user.email),
+    await adminDb.collection("users").doc(session.user.email).set(
       {
         email: session.user.email,
-        createdAt: serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
         roadmapLevel: {},
       },
       { merge: true }
@@ -137,6 +118,50 @@ Topic: ${prompt}
       session.user
     );
 
+    // Award 10 XP for generating a course
+    try {
+      const statsRef = adminDb.collection("gamification").doc(session.user.email);
+      await adminDb.runTransaction(async (transaction) => {
+        const statsDoc = await transaction.get(statsRef);
+        const xpGained = 10;
+        let stats = statsDoc.exists
+          ? statsDoc.data()
+          : {
+              xp: 0,
+              level: 1,
+              streak: 1,
+              badges: [],
+              rank: 0,
+              achievements: [],
+              lastActive: new Date().toISOString(),
+            };
+
+        const newXP = (stats.xp || 0) + xpGained;
+        const newLevel = Math.floor(newXP / 1000) + 1;
+
+        transaction.set(
+          statsRef,
+          {
+            ...stats,
+            xp: newXP,
+            level: newLevel,
+            lastActive: new Date().toISOString(),
+            achievements: [
+              ...(stats.achievements || []),
+              {
+                title: "New Course Generated!",
+                description: "You generated a new AI course",
+                xp: xpGained,
+                timestamp: new Date().toISOString(),
+              },
+            ],
+          },
+          { merge: true }
+        );
+      });
+    } catch (xpError) {
+      console.error("Failed to award XP for course generation:", xpError);
+    }
   } catch (error) {
     console.error("Gemini generation failed:", error);
 
@@ -163,26 +188,25 @@ Topic: ${prompt}
   }
 }
 
-
 async function checkEligible(session) {
   try {
-    const q = query(
-      collection(db, "users", session.user.email, "roadmaps"),
-      where("process", "==", "completed")
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.size < 6; 
+    const q = adminDb
+      .collection("users")
+      .doc(session.user.email)
+      .collection("roadmaps")
+      .where("process", "==", "completed");
+    const snapshot = await q.get();
+    return snapshot.size < 6;
   } catch (error) {
     console.error("Eligibility check failed:", error);
     return false;
   }
 }
 
-
 export async function POST(req) {
   try {
     const user_prompt = await req.json();
-    const session = await auth();
+    const session = await getServerSession();
 
     if (!session?.user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -193,10 +217,7 @@ export async function POST(req) {
     }
 
     if (user_prompt.prompt.length > 1500) {
-      return NextResponse.json(
-        { message: "Prompt too long. Maximum 1500 characters." },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Prompt too long. Maximum 1500 characters." }, { status: 400 });
     }
 
     const isEligible = await checkEligible(session);
@@ -209,34 +230,19 @@ export async function POST(req) {
 
     const roadmapId = nanoid(20);
 
-    
-    const dbSuccess = await updateDatabase(
-      { process: "pending", createdAt: Date.now() },
-      roadmapId,
-      session.user
-    );
+    const dbSuccess = await updateDatabase({ process: "pending", createdAt: Date.now() }, roadmapId, session.user);
 
     if (!dbSuccess) {
-      return NextResponse.json(
-        { message: "Failed to initialize roadmap" },
-        { status: 500 }
-      );
+      return NextResponse.json({ message: "Failed to initialize roadmap" }, { status: 500 });
     }
 
-    
     setTimeout(() => {
       generateRoadmap(user_prompt.prompt, roadmapId, session, user_prompt);
     }, 0);
 
-    return NextResponse.json(
-      { process: "pending", id: roadmapId },
-      { status: 202 }
-    );
+    return NextResponse.json({ process: "pending", id: roadmapId }, { status: 202 });
   } catch (error) {
     console.error("POST /api/user_prompt error:", error);
-    return NextResponse.json(
-      { message: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

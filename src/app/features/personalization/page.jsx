@@ -1,5 +1,5 @@
 "use client";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { usePersonalization } from "@/hooks/usePersonalization";
 import { Progress } from "@/components/ui/progress";
 
 export default function PersonalizationPage() {
-  const { data: session, status } = useSession();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const { profile, loading } = usePersonalization();
   const [learningStyle, setLearningStyle] = useState(null);
@@ -42,7 +42,7 @@ export default function PersonalizationPage() {
     }
   };
 
-  if (status === "loading" || loading) {
+  if (loading || loading) {
     return <div className="p-8">Loading...</div>;
   }
 

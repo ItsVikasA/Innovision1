@@ -1,11 +1,11 @@
 import { db } from "@/lib/firebase";
 import { getDoc, doc } from "firebase/firestore";
-import { auth } from "@/app/auth";
+import { getServerSession } from "@/lib/auth-server";
 import { NextResponse } from "next/server";
 
 export async function GET(req, { params }) {
     try {
-        const session = await auth();
+        const session = await getServerSession();
         if (!session) {
             return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
         }

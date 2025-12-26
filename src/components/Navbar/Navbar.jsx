@@ -17,7 +17,6 @@ import {
   BookOpen,
 } from "lucide-react";
 import { CgDetailsMore } from "react-icons/cg";
-import { authenti } from "./new";
 import { Sun, Moon } from "lucide-react";
 import Image from "next/image";
 import GoogleTranslate from "../GoogleTranslate";
@@ -25,12 +24,12 @@ import { useContext } from "react";
 import xpContext from "@/contexts/xp";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { useAuth } from "@/contexts/auth";
 import Logout from "./Logout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Navbar = () => {
-  const [session, setSession] = useState(null);
+  const { user, logout } = useAuth();
   const [sidebar, setSidebar] = useState(false);
   const [theme, setTheme] = useState("light"); // Default theme: light
   const [streak, setStreak] = useState(0);
@@ -57,19 +56,12 @@ const Navbar = () => {
     document.documentElement.className = newTheme; // Apply theme globally
   };
 
-  // Fetch session
+  // Fetch streak when user is logged in
   useEffect(() => {
-    const fetchSession = async () => {
-      let session = await authenti();
-      setSession(session);
-
-      // Fetch streak if user is logged in
-      if (session?.user?.email) {
-        fetchStreak(session.user.email);
-      }
-    };
-    fetchSession();
-  }, []);
+    if (user?.email) {
+      fetchStreak(user.email);
+    }
+  }, [user]);
 
   // Function to fetch streak
   const fetchStreak = async (email) => {
@@ -83,6 +75,7 @@ const Navbar = () => {
   };
 
   // Poll for streak updates every 10 seconds
+<<<<<<< HEAD
   useEffect(() => {
     if (session?.user?.email) {
       const interval = setInterval(() => {
@@ -92,11 +85,21 @@ const Navbar = () => {
       return () => clearInterval(interval);
     }
   }, [session]);
+=======
+  // useEffect(() => {
+  //   if (user?.email) {
+  //     const interval = setInterval(() => {
+  //       fetchStreak(user.email);
+  //     }, 10000); // Update every 10 seconds
+
+  //     return () => clearInterval(interval);
+  //   }
+  // }, [user]);
+>>>>>>> 12cdf468bf67055cd4fddc04aa2fb76e3d24d93d
 
   // Sign out user
   const signOutUser = async () => {
-    await signOut();
-    setSession(null);
+    await logout();
     router.push("/");
   };
 
@@ -157,12 +160,12 @@ const Navbar = () => {
               >
                 <IoClose className="text-lg" />
               </Button>
-              {session ? (
+              {user ? (
                 <nav>
                   <ul className="flex flex-col max-md:text-lg ml-4 gap-3 ">
                     <li onClick={() => setSidebar(false)}>
                       <Link
-                        href={session ? `/roadmap` : "/"}
+                        href={user ? `/roadmap` : "/"}
                         className={`block py-2 px-3 rounded-lg transition-all duration-200 hover:bg-slate-100/80 ${
                           isActiveLink("/roadmap") || isActiveLink("/")
                             ? "bg-blue-50 text-blue-600 font-semibold border-l-4 border-blue-500"
@@ -344,12 +347,12 @@ const Navbar = () => {
             </div>
             <div className="p-4 pt-3 border-t border-slate-200/20 bg-background/95">
               <div className="flex items-center">
-                {session ? (
+                {user ? (
                   <div className="flex items-center">
                     <Link href={"/profile"} onClick={() => setSidebar(false)}>
                       <Avatar className={"w-7 mx-1 h-7"}>
-                        <AvatarImage src={session?.user.image} alt={"logo"} />
-                        <AvatarFallback>{session?.user.name[0].toUpperCase()}</AvatarFallback>
+                        <AvatarImage src={user?.image} alt={"logo"} />
+                        <AvatarFallback>{user?.name?.[0].toUpperCase() || "U"}</AvatarFallback>
                       </Avatar>
                     </Link>
                     <Button
@@ -395,7 +398,7 @@ const Navbar = () => {
 
         <div className="flex items-center gap-1 ">
           <Link
-            href={session ? `/roadmap` : "/"}
+            href={user ? `/roadmap` : "/"}
             className="flex gap-1 items-center hover:scale-105 transition-transform duration-200"
           >
             <Image src="/InnoVision_LOGO-removebg-preview.png" alt="logo" width={48} height={48} />
@@ -404,7 +407,7 @@ const Navbar = () => {
           </Link>
         </div>
         <div className="flex items-center gap-2 sm:w-auto w-22 justify-center">
-          {session && (
+          {user && (
             <>
               <div className="flex gap-2 items-center relative rounded-2xl border-2 px-4 py-2 border-green-500/50 bg-green-50/50 dark:bg-green-950/20">
                 <Sparkles className="h-4 w-4 text-green-500" />
@@ -450,12 +453,12 @@ const Navbar = () => {
             >
               {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
             </Button>
-            {session ? (
+            {user ? (
               <Link href={"/profile"} className="hover:scale-110 transition-transform duration-200">
                 <Avatar className="w-8 h-8 ring-2 ring-blue-500/20 hover:ring-blue-500/40 transition-all duration-200">
-                  <AvatarImage src={session?.user.image} alt={"logo"} />
+                  <AvatarImage src={user?.image} alt={"logo"} />
                   <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                    {session?.user.name[0].toUpperCase()}
+                    {user?.name[0].toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </Link>

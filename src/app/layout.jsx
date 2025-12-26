@@ -3,7 +3,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar/Navbar";
 import { Toaster } from "@/components/ui/sonner";
 import LoaderProvider from "@/components/ui/Custom/ToastLoader";
-import { SessionProvider } from "next-auth/react";
+import { AuthProvider } from "@/contexts/auth";
 import { XpProvider } from "@/contexts/xp";
 import OfflineIndicator from "@/components/OfflineIndicator";
 
@@ -27,10 +27,8 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body
-        className={`${robotoSans.variable} ${robotoMono.variable} antialiased`}
-      >
-        <SessionProvider>
+      <body className={`${robotoSans.variable} ${robotoMono.variable} antialiased`}>
+        <AuthProvider>
           <XpProvider>
             <LoaderProvider>
               <Navbar />
@@ -39,7 +37,7 @@ export default function RootLayout({ children }) {
               <Toaster richColors />
             </LoaderProvider>
           </XpProvider>
-        </SessionProvider>
+        </AuthProvider>
       </body>
     </html>
   );

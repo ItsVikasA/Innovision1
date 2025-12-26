@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { db } from "@/lib/firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { adminDb, FieldValue } from "@/lib/firebase-admin";
+import { getServerSession } from "@/lib/auth-server";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export async function POST(request) {
   try {
+    const session = await getServerSession();
     const { title, summary, transcript } = await request.json();
-    
+
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-    
+
     const prompt = `Create a detailed course from this YouTube video:
 
 Title: ${title}
@@ -41,18 +42,65 @@ Return as JSON matching this structure:
     const text = result.response.text();
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     const courseData = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
-    
+
     if (!courseData) {
       throw new Error("Failed to generate course");
     }
 
     // Save to Firebase
-    const docRef = await addDoc(collection(db, "roadmaps"), {
+    const docRef = await adminDb.collection("roadmaps").add({
       ...courseData,
       source: "youtube",
       createdAt: new Date().toISOString(),
-      process: "completed"
+      process: "completed",
     });
+
+    // Award 10 XP for generating a course
+    if (session?.user?.email) {
+      try {
+        const statsRef = adminDb.collection("gamification").doc(session.user.email);
+        await adminDb.runTransaction(async (transaction) => {
+          const statsDoc = await transaction.get(statsRef);
+          const xpGained = 10;
+          let stats = statsDoc.exists
+            ? statsDoc.data()
+            : {
+                xp: 0,
+                level: 1,
+                streak: 1,
+                badges: [],
+                rank: 0,
+                achievements: [],
+                lastActive: new Date().toISOString(),
+              };
+
+          const newXP = (stats.xp || 0) + xpGained;
+          const newLevel = Math.floor(newXP / 1000) + 1;
+
+          transaction.set(
+            statsRef,
+            {
+              ...stats,
+              xp: newXP,
+              level: newLevel,
+              lastActive: new Date().toISOString(),
+              achievements: [
+                ...(stats.achievements || []),
+                {
+                  title: "New Course Generated!",
+                  description: "You generated a new AI course",
+                  xp: xpGained,
+                  timestamp: new Date().toISOString(),
+                },
+              ],
+            },
+            { merge: true }
+          );
+        });
+      } catch (xpError) {
+        console.error("Failed to award YouTube course XP:", xpError);
+      }
+    }
 
     return NextResponse.json({ id: docRef.id, ...courseData });
   } catch (error) {

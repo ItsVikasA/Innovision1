@@ -1,42 +1,38 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 
 export async function POST(request) {
   try {
     const courseData = await request.json();
-    
+
     if (courseData.id) {
       // Update existing draft
-      const docRef = doc(db, "studio_courses", courseData.id);
-      await updateDoc(docRef, {
+      const docRef = adminDb.collection("studio_courses").doc(courseData.id);
+      await docRef.update({
         ...courseData,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
-      
-      return NextResponse.json({ 
-        success: true, 
+
+      return NextResponse.json({
+        success: true,
         id: courseData.id,
-        message: "Draft updated" 
+        message: "Draft updated",
       });
     } else {
       // Create new draft
-      const docRef = await addDoc(collection(db, "studio_courses"), {
+      const docRef = await adminDb.collection("studio_courses").add({
         ...courseData,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       });
-      
-      return NextResponse.json({ 
-        success: true, 
+
+      return NextResponse.json({
+        success: true,
         id: docRef.id,
-        message: "Draft saved" 
+        message: "Draft saved",
       });
     }
   } catch (error) {
     console.error("Error saving draft:", error);
-    return NextResponse.json(
-      { error: "Failed to save draft" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to save draft" }, { status: 500 });
   }
 }

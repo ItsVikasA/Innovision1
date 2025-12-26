@@ -1,32 +1,32 @@
 // Custom hook for personalization
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/auth";
 import { useEffect, useState } from "react";
 
 export function usePersonalization() {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (session?.user?.email) {
+    if (user?.email) {
       loadProfile();
     }
-  }, [session]);
+  }, [user]);
 
   const loadProfile = async () => {
     try {
-      const response = await fetch('/api/personalization', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/personalization", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: session.user.email,
-          action: 'getProfile',
+          userId: user.email,
+          action: "getProfile",
         }),
       });
       const data = await response.json();
       setProfile(data.result);
     } catch (error) {
-      console.error('Failed to load profile:', error);
+      console.error("Failed to load profile:", error);
     } finally {
       setLoading(false);
     }
@@ -34,36 +34,36 @@ export function usePersonalization() {
 
   const recordInteraction = async (action, metrics, context) => {
     try {
-      await fetch('/api/personalization', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch("/api/personalization", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: session.user.email,
-          action: 'recordInteraction',
+          userId: user.email,
+          action: "recordInteraction",
           data: { action, metrics, context },
         }),
       });
       await loadProfile();
     } catch (error) {
-      console.error('Failed to record interaction:', error);
+      console.error("Failed to record interaction:", error);
     }
   };
 
   const getRecommendation = async (context, actions) => {
     try {
-      const response = await fetch('/api/personalization', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/personalization", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: session.user.email,
-          action: 'getRecommendation',
+          userId: user.email,
+          action: "getRecommendation",
           data: { context, actions },
         }),
       });
       const data = await response.json();
       return data.result;
     } catch (error) {
-      console.error('Failed to get recommendation:', error);
+      console.error("Failed to get recommendation:", error);
       return actions[0];
     }
   };

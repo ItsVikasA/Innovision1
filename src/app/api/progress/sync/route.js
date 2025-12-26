@@ -1,7 +1,6 @@
 // Progress Sync API for Offline Support
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 
 export async function POST(request) {
   try {
@@ -12,8 +11,8 @@ export async function POST(request) {
     }
 
     // Save to Firebase
-    const progressRef = doc(db, "progress", `${progress.userId}_${progress.courseId}_${Date.now()}`);
-    await setDoc(progressRef, {
+    const progressRef = adminDb.collection("progress").doc(`${progress.userId}_${progress.courseId}_${Date.now()}`);
+    await progressRef.set({
       ...progress,
       syncedAt: Date.now(),
     });

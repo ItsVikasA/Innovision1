@@ -1,7 +1,7 @@
 "use client";
 import Landing from "@/components/Landing/Landing";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/auth";
 import { useEffect, useState } from "react";
 import Loading from "./loading";
 
@@ -19,7 +19,7 @@ const thoughts = [
 ];
 
 const Page = () => {
-  const { data: session, status } = useSession();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const [text, setText] = useState("Loading...");
 
@@ -29,10 +29,10 @@ const Page = () => {
   }, []);
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (user) {
       router.replace("/roadmap");
     }
-  }, [status]);
+  }, [user, router]);
 
   useEffect(() => {
     const t1 = setTimeout(() => {
@@ -49,24 +49,20 @@ const Page = () => {
     };
   }, []);
 
-  if (status === "loading") {
+  if (loading) {
     return (
       <div className="relative text-center">
         <Loading />
-        <p className="absolute z-[5] top-1/2 left-1/2 translate-y-1/2 -translate-x-1/2">
-          {text}
-        </p>
+        <p className="absolute z-[5] top-1/2 left-1/2 translate-y-1/2 -translate-x-1/2">{text}</p>
       </div>
     );
   }
 
-  if (status === "authenticated") {
+  if (user) {
     return (
       <div className="relative text-center">
         <Loading />
-        <p className="absolute z-[5] top-1/2 left-1/2 translate-y-1/2 -translate-x-1/2">
-          {text}
-        </p>
+        <p className="absolute z-[5] top-1/2 left-1/2 translate-y-1/2 -translate-x-1/2">{text}</p>
       </div>
     );
   }

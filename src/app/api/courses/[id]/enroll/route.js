@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/app/auth";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { getServerSession } from "@/lib/auth-server";
+import { adminDb } from "@/lib/firebase-admin";
 
 export async function POST(request, { params }) {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session || !session.user || !session.user.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -13,9 +12,9 @@ export async function POST(request, { params }) {
     const { id: courseId } = params;
 
     // Check if user is already enrolled
-    const roadmapsRef = collection(db, "users", session.user.email, "roadmaps");
-    const enrollmentQuery = query(roadmapsRef, where("courseId", "==", courseId));
-    const existingEnrollment = await getDocs(enrollmentQuery);
+    const roadmapsRef = adminDb.collection("users").doc(session.user.email).collection("roadmaps");
+    const enrollmentQuery = roadmapsRef.where("courseId", "==", courseId);
+    const existingEnrollment = await enrollmentQuery.get();
 
     if (!existingEnrollment.empty) {
       const existingRoadmap = existingEnrollment.docs[0];
@@ -23,15 +22,15 @@ export async function POST(request, { params }) {
         success: true,
         roadmapId: existingRoadmap.id,
         message: "You are already enrolled in this course",
-        alreadyEnrolled: true
+        alreadyEnrolled: true,
       });
     }
 
     // Fetch course from published_courses
-    const courseRef = doc(db, "published_courses", courseId);
-    const courseSnap = await getDoc(courseRef);
+    const courseRef = adminDb.collection("published_courses").doc(courseId);
+    const courseSnap = await courseRef.get();
 
-    if (!courseSnap.exists()) {
+    if (!courseSnap.exists) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 });
     }
 
@@ -40,9 +39,9 @@ export async function POST(request, { params }) {
 
     // Create roadmap
     const roadmapId = `${Date.now()}`;
-    const roadmapRef = doc(db, "users", session.user.email, "roadmaps", roadmapId);
+    const roadmapRef = adminDb.collection("users").doc(session.user.email).collection("roadmaps").doc(roadmapId);
 
-    await setDoc(roadmapRef, {
+    await roadmapRef.set({
       userId: session.user.email,
       courseId: courseId,
       courseTitle: courseData.title || "Untitled Course",
@@ -51,64 +50,60 @@ export async function POST(request, { params }) {
         chapterNumber: idx + 1,
         chapterTitle: ch.title || `Chapter ${idx + 1}`,
         chapterDescription: ch.description || "",
-        completed: false
+        completed: false,
       })),
       completed: false,
       process: "completed",
       createdAt: new Date().toISOString(),
       enrolledAt: new Date().toISOString(),
-      isStudioCourse: true // Mark as Studio course
+      isStudioCourse: true, // Mark as Studio course
     });
 
     // Create chapter subcollections with actual content
     for (let i = 0; i < chapters.length; i++) {
       const chapter = chapters[i];
       const chapterNum = (i + 1).toString();
-      
-      const chapterRef = doc(
-        db,
-        "users",
-        session.user.email,
-        "roadmaps",
-        roadmapId,
-        "chapters",
-        chapterNum
-      );
-      
-      await setDoc(chapterRef, {
+
+      const chapterRef = adminDb
+        .collection("users")
+        .doc(session.user.email)
+        .collection("roadmaps")
+        .doc(roadmapId)
+        .collection("chapters")
+        .doc(chapterNum);
+
+      await chapterRef.set({
         content: chapter.content || "",
         title: chapter.title || `Chapter ${i + 1}`,
         chapterNumber: i + 1,
         process: "completed",
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       });
-      
+
       // Create tasks document
-      const tasksRef = doc(
-        db,
-        "users",
-        session.user.email,
-        "roadmaps",
-        roadmapId,
-        "chapters",
-        chapterNum,
-        "tasks",
-        "task"
-      );
-      
-      await setDoc(tasksRef, {});
+      const tasksRef = adminDb
+        .collection("users")
+        .doc(session.user.email)
+        .collection("roadmaps")
+        .doc(roadmapId)
+        .collection("chapters")
+        .doc(chapterNum)
+        .collection("tasks")
+        .doc("task");
+
+      await tasksRef.set({});
     }
 
     return NextResponse.json({
       success: true,
       roadmapId: roadmapId,
-      message: "Successfully enrolled in course"
+      message: "Successfully enrolled in course",
     });
   } catch (error) {
     return NextResponse.json(
-      { 
-        error: "Failed to enroll in course", 
-        details: error.message
+      {
+        error: "Failed to enroll in course",
+        details: error.message,
       },
       { status: 500 }
     );

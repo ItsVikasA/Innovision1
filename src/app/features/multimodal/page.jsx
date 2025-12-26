@@ -1,5 +1,5 @@
 "use client";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 export default function MultimodalPage() {
-  const { data: session, status } = useSession();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const [content, setContent] = useState("");
   const [contentType, setContentType] = useState("audio");
@@ -69,7 +69,7 @@ export default function MultimodalPage() {
     }
   };
 
-  if (status === "loading") {
+  if (loading) {
     return <div className="p-8">Loading...</div>;
   }
 

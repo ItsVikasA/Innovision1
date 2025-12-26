@@ -1,18 +1,18 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSession, signIn } from "next-auth/react";
+import { useAuth } from "@/contexts/auth";
 import { useRouter } from "next/navigation";
 
 export default function SignIn() {
-  const { data: session } = useSession();
+  const { user, googleSignIn, githubSignIn } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (session?.user) {
+    if (user) {
       router.push("/roadmap");
     }
-  }, [session, router]);
+  }, [user, router]);
 
   return (
     <div className="min-h-[calc(100vh-64px)]">
@@ -29,7 +29,7 @@ export default function SignIn() {
 
                 <div className="mt-16 grid space-y-4">
                   <button
-                    onClick={() => signIn("github")}
+                    onClick={() => githubSignIn()}
                     className="group h-12 px-6 border-2 rounded-full transition duration-300 
                                             hover:border-blue-400 +"
                   >
@@ -49,16 +49,12 @@ export default function SignIn() {
                   </button>
 
                   <button
-                    onClick={() => signIn("google")}
+                    onClick={() => googleSignIn()}
                     className="group h-12 px-6 border-2 rounded-full transition duration-300 
                                             hover:border-red-400 "
                   >
                     <div className="relative flex items-center space-x-4 justify-center">
-                      <img
-                        src="/google.png"
-                        alt="Google"
-                        className="absolute left-0 w-5"
-                      />
+                      <img src="/google.png" alt="Google" className="absolute left-0 w-5" />
                       <span className="block w-max font-semibold tracking-wide text-sm transition duration-300 group-hover:text-red-600 sm:text-base">
                         Continue with Google
                       </span>

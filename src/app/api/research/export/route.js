@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 import crypto from "crypto";
 
 export async function GET(request) {
@@ -23,9 +22,9 @@ export async function GET(request) {
 
 async function exportInteractions() {
   // Get all user activity data
-  const snapshot = await getDocs(collection(db, "user_activity"));
-  
-  const anonymizedData = snapshot.docs.map(doc => {
+  const snapshot = await adminDb.collection("user_activity").get();
+
+  const anonymizedData = snapshot.docs.map((doc) => {
     const data = doc.data();
     return {
       userId: hashUserId(data.userId || doc.id),
@@ -33,23 +32,23 @@ async function exportInteractions() {
       timestamp: roundTimestamp(data.timestamp),
       duration: data.duration,
       courseId: data.courseId,
-      chapterId: data.chapterId
+      chapterId: data.chapterId,
     };
   });
 
   return new NextResponse(JSON.stringify(anonymizedData, null, 2), {
     headers: {
-      'Content-Type': 'application/json',
-      'Content-Disposition': 'attachment; filename=interactions.json'
-    }
+      "Content-Type": "application/json",
+      "Content-Disposition": "attachment; filename=interactions.json",
+    },
   });
 }
 
 async function exportOutcomes() {
   // Get gamification stats (outcomes)
-  const snapshot = await getDocs(collection(db, "gamification"));
-  
-  const anonymizedData = snapshot.docs.map(doc => {
+  const snapshot = await adminDb.collection("gamification").get();
+
+  const anonymizedData = snapshot.docs.map((doc) => {
     const data = doc.data();
     return {
       userId: hashUserId(doc.id),
@@ -58,20 +57,20 @@ async function exportOutcomes() {
       streak: data.streak,
       badgesCount: data.badges?.length || 0,
       achievementsCount: data.achievements?.length || 0,
-      lastActive: roundTimestamp(data.lastActive)
+      lastActive: roundTimestamp(data.lastActive),
     };
   });
 
   return new NextResponse(JSON.stringify(anonymizedData, null, 2), {
     headers: {
-      'Content-Type': 'application/json',
-      'Content-Disposition': 'attachment; filename=outcomes.json'
-    }
+      "Content-Type": "application/json",
+      "Content-Disposition": "attachment; filename=outcomes.json",
+    },
   });
 }
 
 function hashUserId(userId) {
-  return crypto.createHash('sha256').update(userId).digest('hex').substring(0, 16);
+  return crypto.createHash("sha256").update(userId).digest("hex").substring(0, 16);
 }
 
 function roundTimestamp(timestamp) {

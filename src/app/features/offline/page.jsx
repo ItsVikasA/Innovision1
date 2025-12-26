@@ -1,5 +1,5 @@
 "use client";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { useOffline } from "@/hooks/useOffline";
 import { toast } from "sonner";
 
 export default function OfflinePage() {
-  const { data: session, status } = useSession();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const { isOnline, offlineCourses, downloadCourse } = useOffline();
   const [courses, setCourses] = useState([]);
@@ -57,7 +57,7 @@ export default function OfflinePage() {
     return offlineCourses.some(c => c.id === courseId);
   };
 
-  if (status === "loading") {
+  if (loading) {
     return <div className="p-8">Loading...</div>;
   }
 

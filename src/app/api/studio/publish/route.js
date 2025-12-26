@@ -1,28 +1,24 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 
 export async function POST(request) {
   try {
     const courseData = await request.json();
-    
+
     // Save to published courses collection
-    const docRef = await addDoc(collection(db, "published_courses"), {
+    const docRef = await adminDb.collection("published_courses").add({
       ...courseData,
       status: "published",
-      publishedAt: new Date().toISOString()
+      publishedAt: new Date().toISOString(),
     });
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    return NextResponse.json({
+      success: true,
       id: docRef.id,
-      message: "Course published successfully" 
+      message: "Course published successfully",
     });
   } catch (error) {
     console.error("Error publishing course:", error);
-    return NextResponse.json(
-      { error: "Failed to publish course" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to publish course" }, { status: 500 });
   }
 }

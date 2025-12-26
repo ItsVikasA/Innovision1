@@ -1,5 +1,5 @@
 "use client";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { projectTemplates, getUserProjects } from "@/lib/projects";
 import { Progress } from "@/components/ui/progress";
 
 export default function ProjectsPage() {
-  const { data: session, status } = useSession();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +22,7 @@ export default function ProjectsPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (session?.user?.email) {
+    if (user?.email) {
       loadProjects();
     }
   }, [session]);
@@ -38,7 +38,7 @@ export default function ProjectsPage() {
     }
   };
 
-  if (status === "loading") {
+  if (loading) {
     return <div className="p-8">Loading...</div>;
   }
 

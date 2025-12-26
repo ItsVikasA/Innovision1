@@ -1,5 +1,5 @@
 "use client";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import Link from "next/link";
 import { projectTemplates, createProject } from "@/lib/projects";
 
 export default function CreateProjectPage() {
-  const { data: session, status } = useSession();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const templateId = searchParams.get("template");
@@ -52,7 +52,7 @@ export default function CreateProjectPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!session?.user?.email) {
+    if (!user?.email) {
       alert("Please log in to create a project");
       return;
     }
@@ -88,7 +88,7 @@ export default function CreateProjectPage() {
     });
   };
 
-  if (status === "loading") {
+  if (loading) {
     return <div className="p-8">Loading...</div>;
   }
 

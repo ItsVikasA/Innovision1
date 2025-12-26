@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 
 /**
  * Reset gamification stats for a user
@@ -15,7 +14,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "userId required" }, { status: 400 });
     }
 
-    const userRef = doc(db, "gamification", userId);
+    const userRef = adminDb.collection("gamification").doc(userId);
     const resetData = {
       xp: 0,
       level: 1,
@@ -24,22 +23,18 @@ export async function POST(request) {
       rank: 0,
       achievements: [],
       lastActive: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
-    
-    await setDoc(userRef, resetData);
-    
+
+    await userRef.set(resetData);
+
     return NextResponse.json({
       success: true,
       message: "Gamification stats reset to 0",
-      data: resetData
+      data: resetData,
     });
-
   } catch (error) {
     console.error("Reset error:", error);
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

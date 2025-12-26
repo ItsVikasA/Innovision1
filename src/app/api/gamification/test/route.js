@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 
 /**
  * Test endpoint to initialize and test gamification system
@@ -18,7 +17,7 @@ export async function GET(request) {
 
     if (action === "init") {
       // Initialize user gamification data
-      const userRef = doc(db, "gamification", userId);
+      const userRef = adminDb.collection("gamification").doc(userId);
       const initialData = {
         xp: 0,
         level: 1,
@@ -27,15 +26,15 @@ export async function GET(request) {
         rank: 0,
         achievements: [],
         lastActive: new Date().toISOString(),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
-      
-      await setDoc(userRef, initialData, { merge: true });
-      
+
+      await userRef.set(initialData, { merge: true });
+
       return NextResponse.json({
         success: true,
         message: "Gamification initialized",
-        data: initialData
+        data: initialData,
       });
     }
 
@@ -43,40 +42,40 @@ export async function GET(request) {
       // Award test XP
       const xpAmount = parseInt(searchParams.get("xp") || "100");
       const activityType = searchParams.get("type") || "complete_chapter";
-      
+
       const awardRes = await fetch(`${request.nextUrl.origin}/api/gamification/stats`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId,
           action: activityType,
-          value: xpAmount
-        })
+          value: xpAmount,
+        }),
       });
-      
+
       const result = await awardRes.json();
       return NextResponse.json({
         success: true,
         message: `Awarded ${xpAmount} XP`,
-        result
+        result,
       });
     }
 
     if (action === "check") {
       // Check current stats
-      const userRef = doc(db, "gamification", userId);
-      const userDoc = await getDoc(userRef);
-      
-      if (!userDoc.exists()) {
+      const userRef = adminDb.collection("gamification").doc(userId);
+      const userDoc = await userRef.get();
+
+      if (!userDoc.exists) {
         return NextResponse.json({
           exists: false,
-          message: "User not initialized. Use ?action=init to initialize."
+          message: "User not initialized. Use ?action=init to initialize.",
         });
       }
-      
+
       return NextResponse.json({
         exists: true,
-        data: userDoc.data()
+        data: userDoc.data(),
       });
     }
 
@@ -85,15 +84,11 @@ export async function GET(request) {
       usage: {
         init: "/api/gamification/test?userId=user@example.com&action=init",
         award: "/api/gamification/test?userId=user@example.com&action=award&xp=100&type=complete_chapter",
-        check: "/api/gamification/test?userId=user@example.com&action=check"
-      }
+        check: "/api/gamification/test?userId=user@example.com&action=check",
+      },
     });
-
   } catch (error) {
     console.error("Test error:", error);
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
