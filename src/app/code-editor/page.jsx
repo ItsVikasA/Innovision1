@@ -63,10 +63,10 @@ export default function CodeEditor() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Code Editor & AI Website Builder</h1>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto pt-20 px-6 pb-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold mb-2">Code Editor & AI Website Builder</h1>
           <p className="text-muted-foreground">
             Write, run, and test code in multiple languages or generate websites with AI
           </p>
@@ -84,10 +84,10 @@ export default function CodeEditor() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="editor">
+          <TabsContent value="editor" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Editor */}
-              <Card>
+              <Card className="border-border">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Code Editor</CardTitle>
@@ -110,7 +110,7 @@ export default function CodeEditor() {
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     placeholder={`Write your ${language} code here...`}
-                    className="font-mono min-h-[400px]"
+                    className="font-mono min-h-[450px] bg-muted/50"
                   />
                   <Button onClick={runCode} className="w-full">
                     <Play className="h-4 w-4 mr-2" />
@@ -120,12 +120,12 @@ export default function CodeEditor() {
               </Card>
 
               {/* Output */}
-              <Card>
+              <Card className="border-border">
                 <CardHeader>
                   <CardTitle>Output</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <pre className="bg-muted p-4 rounded-lg min-h-[400px] overflow-auto font-mono text-sm">
+                  <pre className="bg-muted/50 p-4 rounded-lg min-h-[450px] overflow-auto font-mono text-sm border border-border">
                     {output || "Output will appear here..."}
                   </pre>
                 </CardContent>
@@ -133,10 +133,10 @@ export default function CodeEditor() {
             </div>
           </TabsContent>
 
-          <TabsContent value="website">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TabsContent value="website" className="mt-6">
+            <div className="space-y-6">
               {/* Prompt */}
-              <Card>
+              <Card className="border-border">
                 <CardHeader>
                   <CardTitle>Describe Your Website</CardTitle>
                   <CardDescription>Tell AI what kind of website you want to create</CardDescription>
@@ -146,7 +146,7 @@ export default function CodeEditor() {
                     value={websitePrompt}
                     onChange={(e) => setWebsitePrompt(e.target.value)}
                     placeholder="Example: Create a portfolio website with a hero section, about me, projects gallery, and contact form. Use modern design with blue and white colors."
-                    className="min-h-[300px]"
+                    className="min-h-[120px] bg-muted/50"
                   />
                   <Button onClick={generateWebsite} disabled={isGenerating} className="w-full">
                     <Sparkles className="h-4 w-4 mr-2" />
@@ -156,36 +156,50 @@ export default function CodeEditor() {
               </Card>
 
               {/* Preview */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Generated Code</CardTitle>
-                    {generatedWebsite && (
-                      <Button size="sm" onClick={downloadWebsite}>
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {generatedWebsite ? (
-                    <div className="space-y-4">
-                      <Textarea value={generatedWebsite} readOnly className="font-mono min-h-[300px]" />
-                      <div className="border rounded-lg p-4 bg-white">
-                        <p className="text-sm text-muted-foreground mb-2">Preview:</p>
+              {generatedWebsite ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Code */}
+                  <Card className="border-border">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>Generated HTML Code</CardTitle>
+                        <Button size="sm" onClick={downloadWebsite}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <Textarea value={generatedWebsite} readOnly className="font-mono min-h-[600px] bg-muted/50 text-xs" />
+                    </CardContent>
+                  </Card>
+
+                  {/* Preview */}
+                  <Card className="border-border">
+                    <CardHeader>
+                      <CardTitle>Live Preview</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="border border-border rounded-lg overflow-hidden bg-white">
                         <iframe
                           srcDoc={generatedWebsite}
-                          className="w-full h-[300px] border rounded"
+                          className="w-full h-[600px]"
                           title="Website Preview"
                         />
                       </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <Card className="border-border">
+                  <CardContent className="py-20">
+                    <div className="flex flex-col items-center justify-center text-center text-muted-foreground">
+                      <Globe className="h-12 w-12 mb-4 opacity-50" />
+                      <p>Generated website preview will appear here...</p>
                     </div>
-                  ) : (
-                    <p className="text-muted-foreground text-center py-20">Generated website will appear here...</p>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </TabsContent>
         </Tabs>

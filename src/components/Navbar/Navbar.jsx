@@ -83,15 +83,15 @@ const Navbar = () => {
   };
 
   // Poll for streak updates every 10 seconds
-  // useEffect(() => {
-  //   if (session?.user?.email) {
-  //     const interval = setInterval(() => {
-  //       fetchStreak(session.user.email);
-  //     }, 10000); // Update every 10 seconds
+  useEffect(() => {
+    if (session?.user?.email) {
+      const interval = setInterval(() => {
+        fetchStreak(session.user.email);
+      }, 10000);
 
-  //     return () => clearInterval(interval);
-  //   }
-  // }, [session]);
+      return () => clearInterval(interval);
+    }
+  }, [session]);
 
   // Sign out user
   const signOutUser = async () => {
